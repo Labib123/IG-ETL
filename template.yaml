@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Sample template for Instagram Comments ETL
+
+Globals:
+  Function:
+    Timeout: 30
+    Handler: app.lambda_handler
+    Runtime: python3.9
+    Layers:
+      - !Ref InfdbCommonLayer
+
+Parameters:
+  Env:
+    Type: String
+    Default: ci
+    AllowedValues:
+      - ci
+      - local
+      - dev
+      - prod
+
+Resources:
+  InfdbInstagramCommentsWebhook:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/infdb_instagram_comments_webhook
+      FunctionName: !Sub "infdb_instagram_comments_webhook_${Env}"
+      Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/ig-etl-${Env}-role"
+      Events:
+        WebhookApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhantomWebhookApiGateway
+            Path: /trigger
+            Method: post
+
+  InfdbCommonLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub "infdb-${Env}-common-layer"
+      ContentUri: "./layers/infdb-common-layer/"
+      CompatibleRuntimes:
+        - python3.9
+    Metadata:
+      BuildMethod: python3.9
+
+  PhantomWebhookApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: Phantom webhook
+      StageName: Staging
+
+
+Outputs:
+  PhantomWebhookApiGateway:
+    Description: 'API Gateway for the Phantom webhook to trigger the ETL Job on a daily basis'
+    Value: !Sub 'https://${PhantomWebhookApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Staging/trigger/'
+  PhantomWebhookApiGatewayRestApiId:
+    Description: 'API Gateway ARN for Basic AWS API Gateway'
+    Value: !Ref PhantomWebhookApiGateway
+    Export:
+      Name: PhantomWebhookApiGateway-RestApiId
+  PhantomWebhookApiGatewayRootResourceId:
+    Value: !GetAtt PhantomWebhookApiGateway.RootResourceId
+    Export:
+      Name: PhantomWebhookApiGateway-RootResourceId
+

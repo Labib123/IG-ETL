@@ -1,0 +1,10 @@
+version=0.1
+
+[ci.deploy.parameters]
+stack_name = "ig-comments-etl"
+s3_bucket = "infdb-data-store-dev"
+s3_prefix = "cloudformation"
+region = "us-east-2"
+parameter_overrides="ParameterKey=s3Bucket,ParameterValue=infdb-data-store-dev ParameterKey=Env,ParameterValue=ci"
+profile="infdb"
+
